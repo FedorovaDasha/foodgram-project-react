@@ -30,6 +30,8 @@ from .serializers import (CreateMyUserSerializer, IngredientSerializer,
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
+    """ Вьюсет для работы с тегами. """
+
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     permission_classes = (AllowAny,)
@@ -37,6 +39,8 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
+    """ Вьюсет для работы с тегами. """
+
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     permission_classes = (AllowAny,)
@@ -46,6 +50,8 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
+    """ Вьюсет для работы с рецептами. """
+
     queryset = Recipe.objects.all()
     permission_classes = (IsAuthorOrAdminOrReadOnly,)
     pagination_class = FoodgramPagination
@@ -63,9 +69,39 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return queryset
 
     def get_serializer_class(self):
+        """ Метод  для определения класса сериализатора. """
+
         if self.request.method in ('POST', 'PATCH', 'DELETE'):
             return WriteRecipeSerializer
         return ReadRecipeSerializer
+
+    def add_method(self, model, recipe, args):
+        """ Метод  для добавления в избранное или список покупок. """
+
+        if not model.objects.filter(**args).exists():
+            obj = model.objects.create(**args)
+            serializer = SimplyRecipeSerializer(recipe)
+            return Response(
+                serializer.data, status=status.HTTP_201_CREATED
+            )
+        else:
+            return Response(
+                {'errors': 'Рецепт уже есть в избранном/списке покупок!'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    def delete_method(self, model, args):
+        """ Метод  для удаления из избранного или списка покупок. """
+
+        try:
+            obj = model.objects.get(**args)
+        except model.DoesNotExist:
+            return Response(
+                {'errors': 'Рецепт не найден в избранном/списке покупок!'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
         detail=True,
@@ -75,44 +111,49 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def favorite(self, request, pk):
+        """ Метод  для добавления/удаления рецепта в избранном. """
+
         try:
             recipe = Recipe.objects.get(pk=pk)
         except Recipe.DoesNotExist:
             return Response(
                 {
-                    'errors': 'Невозможно удалить/добавить в избранное!'
-                    # 'errors': 'несуществующий рецепт!'
+                    'errors': 'Операция с несуществующим рецептом невозможна!'
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if request.method == 'POST':
-            if not Favorite.objects.filter(
-                user=self.request.user, favorites=pk
-            ).exists():
-                favorite = Favorite.objects.create(
-                    user=self.request.user, favorites=recipe
-                )
-                serializer = SimplyRecipeSerializer(recipe)
-                return Response(
-                    serializer.data, status=status.HTTP_201_CREATED
-                )
-            else:
-                return Response(
-                    {'errors': 'Рецепт уже есть в избранном!'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-        if request.method == 'DELETE':
-            try:
-                favorite = Favorite.objects.get(
-                    favorites=pk, user=self.request.user
-                )
-            except Favorite.DoesNotExist:
-                return Response(
-                    {'errors': 'Рецепт не найден в избранном!'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            favorite.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+        args = {'user': self.request.user, 'favorites': recipe}
+
+        if self.request.method == 'POST':
+            return self.add_method(Favorite, recipe, args)
+        if self.request.method == 'DELETE':
+            return self.delete_method(Favorite, args)
+
+    @action(
+        detail=True,
+        methods=['POST', 'DELETE'],
+        url_name='shopping_cart',
+        url_path='shopping_cart',
+        permission_classes=[IsAuthenticated],
+    )
+    def shopping_cart(self, request, pk):
+        """ Метод  для добавления/удаления рецепта в список покупок. """
+
+        try:
+            recipe = Recipe.objects.get(pk=pk)
+        except Recipe.DoesNotExist:
+            return Response(
+                {
+                    'errors': 'Операция с несуществующим рецептом невозможна!'
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        args = {'user': self.request.user, 'recipe': recipe}
+
+        if self.request.method == 'POST':
+            return self.add_method(Purchase, recipe, args)
+        if self.request.method == 'DELETE':
+            return self.delete_method(Purchase, args)
 
     @action(
         detail=False,
@@ -122,6 +163,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def download_shopping_cart(self, request):
+        """ Метод  для формирования списка покупок в pdf-файле. """
+
         ingredients = (
             RecipeIngredient.objects.filter(
                 recipe__purchases_recipe__user=self.request.user
@@ -192,54 +235,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
         buffer.close()
         return response
 
-    @action(
-        detail=True,
-        methods=['POST', 'DELETE'],
-        url_name='shopping_cart',
-        url_path='shopping_cart',
-        permission_classes=[IsAuthenticated],
-    )
-    def shopping_cart(self, request, pk):
-        try:
-            recipe = Recipe.objects.get(pk=pk)
-        except Recipe.DoesNotExist:
-            return Response(
-                {
-                    'errors': 'Невозможно удалить/добавить в список покупок!'
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        if request.method == 'POST':
-            if not Purchase.objects.filter(
-                user=self.request.user, recipe=pk
-            ).exists():
-                purchase = Purchase.objects.create(
-                    user=self.request.user, recipe=recipe
-                )
-                serializer = SimplyRecipeSerializer(recipe)
-                return Response(
-                    serializer.data, status=status.HTTP_201_CREATED
-                )
-            else:
-                return Response(
-                    {'errors': 'Рецепт уже есть в списке покупок!'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-        if request.method == 'DELETE':
-            try:
-                purchase = Purchase.objects.get(
-                    user=self.request.user, recipe=recipe
-                )
-            except Purchase.DoesNotExist:
-                return Response(
-                    {'errors': 'Рецепт не найден в списке покупок!'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            purchase.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-
 
 class UserViewSet(viewsets.ModelViewSet):
+    """Вьюсет для работы с пользователями."""
+
     queryset = MyUser.objects.all()
     permission_classes = (AllowAny,)
     pagination_class = FoodgramPagination
@@ -286,6 +285,8 @@ class UserViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def subscribe(self, request, pk):
+        """ Метод  для работы с подписками пользователя. """
+
         user = get_object_or_404(MyUser, pk=pk)
         if request.method == 'POST':
             if not Subscription.objects.filter(
@@ -326,6 +327,8 @@ class UserViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def subscriptions(self, request):
+        """ Подписки пользователя. """
+
         subscriptions = Subscription.objects.filter(
             subscriber=self.request.user
         )

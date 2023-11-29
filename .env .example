@@ -1,0 +1,10 @@
+# Файл .env образец
+
+POSTGRES_USER=<Имя пользователя БД>
+POSTGRES_PASSWORD=<Пароль пользователя>
+POSTGRES_DB=<Имя базы>
+DB_HOST=db
+DB_PORT=5432
+SECRET_KEY=<>
+DEBUG=True
+ALLOWED_HOSTS=<Список хостов>

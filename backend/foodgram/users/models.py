@@ -5,7 +5,7 @@ from django.db.models import F, Q
 
 
 class MyUser(AbstractUser):
-    """Класс пользователей."""
+    """Модель пользователей."""
 
     ADMIN = 'admin'
     USER = 'user'
@@ -63,6 +63,8 @@ class MyUser(AbstractUser):
 
 
 class Subscription(models.Model):
+    """ Модель подписок пользователя. """
+
     subscriber = models.ForeignKey(
         MyUser,
         on_delete=models.CASCADE,
