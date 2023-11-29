@@ -1,6 +1,7 @@
+from itertools import chain
+
 from django.conf import settings
 from django.contrib import admin
-from itertools import chain
 
 from .models import MyUser, Subscription
 
@@ -33,10 +34,4 @@ class MyUserAdmin(admin.ModelAdmin):
         return list(chain.from_iterable(a))
 
 
-# @admin.register(Subscription)
-# class SubscriptionAdmin(admin.ModelAdmin):
-#     # list_display = ('id', 'user', 'author')
-#     search_fields = ('user', 'author')
-#     # list_filter = ('user', 'author')
-#     empty_value_display = settings.EMPTY_VALUE
 admin.site.register(Subscription)

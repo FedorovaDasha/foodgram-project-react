@@ -1,7 +1,7 @@
 """Загрузка json-файла из папки /data/."""
+import json
 
 from django.core.management.base import BaseCommand
-import json
 from recipes.models import Ingredient
 
 
@@ -10,18 +10,30 @@ class Command(BaseCommand):
 
         with open('data/ingredients.json', encoding='utf-8') as file:
             data = json.load(file)
-            id = 1
             for i in data:
+                name = i['name']
+                measurement_unit = i['measurement_unit']
                 try:
-                    i['id'] = id
-                    ingredient = Ingredient(**i)
-                # ingredient.name = i['name']
-                # ingredient.measurement_unit = i['measurement_unit']
-                    ingredient.save()
-                    id += 1
+                    ingredient, created = Ingredient.objects.get_or_create(
+                        name=name,
+                        measurement_unit=measurement_unit,
+                    )
+                    if created:
+                        ingredient.save()
+                        self.stdout.write(
+                            self.style.SUCCESS(
+                                f'Ингредиент {name} сохранен в базе!'
+                            )
+                        )
+                    else:
+                        self.stderr.write(
+                            self.style.NOTICE(
+                                f'Ингредиент {name} уже есть в базе!'
+                            )
+                        )
                 except Exception as error:
                     self.stderr.write(self.style.WARNING(f'{error}'))
                     raise Exception(error)
             self.stdout.write(
-                self.style.SUCCESS('Successfully load data')
+                self.style.SUCCESS('Данные успешно загружены')
             )

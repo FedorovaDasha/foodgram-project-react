@@ -1,15 +1,10 @@
-from django.contrib import admin
-from django.utils.safestring import mark_safe
 from itertools import chain
 
-from .models import (
-    Tag,
-    Recipe,
-    Ingredient,
-    RecipeIngredient,
-    Favorite,
-    Purchase,
-)
+from django.contrib import admin
+from django.utils.safestring import mark_safe
+
+from .models import (Favorite, Ingredient, Purchase, Recipe, RecipeIngredient,
+                     Tag)
 
 
 class RecipeIngredientInline(admin.TabularInline):
@@ -75,6 +70,7 @@ class TagAdmin(admin.ModelAdmin):
 @admin.register(Ingredient)
 class IngredientAdmin(admin.ModelAdmin):
     list_display = ('name', 'measurement_unit')
+    list_filter = ('name', )
 
 
 admin.site.register(Purchase)
