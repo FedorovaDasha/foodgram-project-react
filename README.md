@@ -41,7 +41,7 @@ sudo docker compose -f docker-compose.production.yml up
 Произойдет скачивание образов, создание и включение контейнеров, создание томов и сети.
 - Проверяем доступность проекта по адресу:
 
-https://myfoodrammm.sytes.net/
+https://myfoodgrammm.sytes.net/
 
 ### _Запуск проекта локально из исходников GitHub_
 - Клонируем себе репозиторий:
