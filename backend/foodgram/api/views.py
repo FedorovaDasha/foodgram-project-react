@@ -79,7 +79,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         """ Метод  для добавления в избранное или список покупок. """
 
         if not model.objects.filter(**args).exists():
-            obj = model.objects.create(**args)
+            model.objects.create(**args)
             serializer = SimplyRecipeSerializer(recipe)
             return Response(
                 serializer.data, status=status.HTTP_201_CREATED

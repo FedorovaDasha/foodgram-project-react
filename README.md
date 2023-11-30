@@ -74,11 +74,6 @@ http://localhost:8000/
 [Foodgram](https://myfoodgrammm.sytes.net)
 
 ##
-#### _Индикатор состояния рабочего процесса workflow:_
-
-![example workflow](https://github.com/FedorovaDasha/foodgram-project-react/actions/workflows/main.yml/badge.svg)
-
-##
 Над проектом работала [FedorovaDasha](https://github.com/FedorovaDasha).
 
 ##
