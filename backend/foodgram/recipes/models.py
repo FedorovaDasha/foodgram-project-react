@@ -25,7 +25,7 @@ class Tag(models.Model):
 
 class Ingredient(models.Model):
     """ Модель ингредиентов. """
-    
+
     name = models.CharField(
         max_length=200,
         verbose_name='Ингредиент'
@@ -108,7 +108,7 @@ class RecipeIngredient(models.Model):
     amount = models.SmallIntegerField(
         validators=[MinValueValidator(MIN_AMOUNT)],
         verbose_name='Количество',
-        )
+    )
 
     class Meta:
         verbose_name = 'Ингредиент рецепта'
