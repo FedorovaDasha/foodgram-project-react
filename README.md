@@ -6,7 +6,7 @@
 #### **_*Foodgram*_ - сервис для любителей кулинарии, который позволяет публиковать рецепты, сохранять избранные, подписываться на любимых авторов, а также формировать список покупок для выбранных рецептов в формате pdf.**
 
 
-![This is an alt text.]( https://pictures.s3.yandex.net/resources/S16_01_1692340098.png "Mau-mau-mauuu")
+![This is an alt text.]( https://pictures.s3.yandex.net/resources/S16_01_1692340098.png "Foodgram - продуктовый помощник")
 
 
 ### _Технологии:_
@@ -68,10 +68,15 @@ sudo docker compose -f [имя-файла-docker-compose.yml] exec backend pytho
 
 http://localhost:8000/
 
-
 ##
 ### _Демо-версия проекта:_
 [Foodgram](https://myfoodgrammm.sytes.net)
+
+### _Для просмотра панели администратора:_
+
+e-mail: admin@mail.ru
+
+password: Superadmin
 
 ##
 Над проектом работала [FedorovaDasha](https://github.com/FedorovaDasha).

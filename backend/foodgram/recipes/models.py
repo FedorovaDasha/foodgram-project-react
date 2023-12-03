@@ -2,8 +2,7 @@ from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 from django.db import models
 
-MIN_COOKING_TIME = 1
-MIN_AMOUNT = 1
+from .constants import MAX_LENGTH_VALUE, MIN_AMOUNT, MIN_COOKING_TIME
 
 User = get_user_model()
 
@@ -11,9 +10,16 @@ User = get_user_model()
 class Tag(models.Model):
     """ Модель тегов. """
 
-    name = models.CharField(max_length=200, verbose_name='Название тега')
+    name = models.CharField(
+        max_length=MAX_LENGTH_VALUE,
+        verbose_name='Название тега'
+    )
     color = models.CharField(max_length=7, verbose_name='Цвет тега')
-    slug = models.SlugField(max_length=200, unique=True, verbose_name='Слаг')
+    slug = models.SlugField(
+        max_length=MAX_LENGTH_VALUE,
+        unique=True,
+        verbose_name='Слаг'
+    )
 
     class Meta:
         verbose_name = 'Тег'
@@ -27,11 +33,11 @@ class Ingredient(models.Model):
     """ Модель ингредиентов. """
 
     name = models.CharField(
-        max_length=200,
+        max_length=MAX_LENGTH_VALUE,
         verbose_name='Ингредиент'
     )
     measurement_unit = models.CharField(
-        max_length=200,
+        max_length=MAX_LENGTH_VALUE,
         verbose_name='Единица измерения'
     )
 
@@ -73,7 +79,7 @@ class Recipe(models.Model):
         verbose_name='Время приготовления'
     )
     name = models.CharField(
-        max_length=200,
+        max_length=MAX_LENGTH_VALUE,
         verbose_name='Название рецепта'
     )
     ingredients = models.ManyToManyField(

@@ -188,13 +188,11 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'Рецепт должен содержать хотя бы один тег!'
             )
-        tag_list = []
-        for tag in tags:
-            if tag in tag_list:
-                raise serializers.ValidationError(
-                    'Теги не должны повторяться!'
-                )
-            tag_list.append(tag)
+        tag_set = set(tags)
+        if len(tags) != len(tag_set):
+            raise serializers.ValidationError(
+                'Теги не должны повторяться!'
+            )
 
         """ Валидация поля ingredients. """
         ingredients = data.get('ingredients')
@@ -202,16 +200,16 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'Рецепт должен содержать хотя бы один ингредиент!'
             )
-        ingredients_list = []
-        for ingredient in ingredients:
-            if ingredient['id'] in ingredients_list:
-                raise serializers.ValidationError(
-                    'Ингредиенты не должны повторяться!'
-                )
-            ingredients_list.append(ingredient['id'])
+        inrgedients_list = [ingredient['id'] for ingredient in ingredients]
+        ingredients_set = set(inrgedients_list)
+        if len(ingredients) != len(ingredients_set):
+            raise serializers.ValidationError(
+                'Ингредиенты не должны повторяться!'
+            )
         return data
 
-    def create_update_ingredients(self, ingredients, recipe):
+    @staticmethod
+    def create_update_ingredients(ingredients, recipe):
         for ingredient in ingredients:
             ingredient_id = ingredient.get('id')
             amount = ingredient.get('amount')

@@ -1,5 +1,3 @@
-import io
-
 from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -78,113 +76,90 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def add_method(self, model, recipe, args):
         """ Метод  для добавления в избранное или список покупок. """
 
-        if not model.objects.filter(**args).exists():
-            model.objects.create(**args)
-            serializer = SimplyRecipeSerializer(recipe)
-            return Response(
-                serializer.data, status=status.HTTP_201_CREATED
-            )
-        else:
+        if model.objects.filter(**args).exists():
             return Response(
                 {'errors': 'Рецепт уже есть в избранном/списке покупок!'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        model.objects.create(**args)
+        serializer = SimplyRecipeSerializer(recipe)
+        return Response(
+            serializer.data, status=status.HTTP_201_CREATED
+        )
 
     def delete_method(self, model, args):
         """ Метод  для удаления из избранного или списка покупок. """
 
-        try:
-            obj = model.objects.get(**args)
-        except model.DoesNotExist:
+        if not (obj := model.objects.filter(**args).first()):
             return Response(
                 {'errors': 'Рецепт не найден в избранном/списке покупок!'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         obj.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(statusсв=status.HTTP_204_NO_CONTENT)
+
+    @staticmethod
+    def get_recipe(pk):
+        """Метод возвращает рецепт по pk."""
+        try:
+            recipe = Recipe.objects.get(pk=pk)
+        except Recipe.DoesNotExist:
+            return Response(
+                {
+                    'errors': 'Операция с несуществующим рецептом невозможна!'
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return recipe
 
     @action(
         detail=True,
-        methods=['POST', 'DELETE'],
+        methods=['POST'],
         url_name='favorite',
         url_path='favorite',
         permission_classes=[IsAuthenticated],
     )
     def favorite(self, request, pk):
-        """ Метод  для добавления/удаления рецепта в избранном. """
+        """ Метод  для добавления рецепта в избранное. """
 
-        try:
-            recipe = Recipe.objects.get(pk=pk)
-        except Recipe.DoesNotExist:
-            return Response(
-                {
-                    'errors': 'Операция с несуществующим рецептом невозможна!'
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        recipe = self.get_recipe(pk)
         args = {'user': self.request.user, 'favorites': recipe}
+        return self.add_method(Favorite, recipe, args)
 
-        if self.request.method == 'POST':
-            return self.add_method(Favorite, recipe, args)
-        if self.request.method == 'DELETE':
-            return self.delete_method(Favorite, args)
+    @favorite.mapping.delete
+    def delete_favorite(self, request, pk):
+        """ Метод  для удаления рецепта из избранного. """
+
+        recipe = self.get_recipe(pk)
+        args = {'user': self.request.user, 'favorites': recipe}
+        return self.delete_method(Favorite, args)
 
     @action(
         detail=True,
-        methods=['POST', 'DELETE'],
+        methods=['POST'],
         url_name='shopping_cart',
         url_path='shopping_cart',
         permission_classes=[IsAuthenticated],
     )
     def shopping_cart(self, request, pk):
-        """ Метод  для добавления/удаления рецепта в список покупок. """
+        """ Метод  для добавления рецепта в список покупок. """
 
-        try:
-            recipe = Recipe.objects.get(pk=pk)
-        except Recipe.DoesNotExist:
-            return Response(
-                {
-                    'errors': 'Операция с несуществующим рецептом невозможна!'
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        recipe = self.get_recipe(pk)
         args = {'user': self.request.user, 'recipe': recipe}
+        return self.add_method(Purchase, recipe, args)
 
-        if self.request.method == 'POST':
-            return self.add_method(Purchase, recipe, args)
-        if self.request.method == 'DELETE':
-            return self.delete_method(Purchase, args)
+    @shopping_cart.mapping.delete
+    def delete_shopping_cart(self, request, pk):
+        """ Метод  для удаления рецепта из списка покупок. """
 
-    @action(
-        detail=False,
-        methods=['GET'],
-        url_name='download_shopping_cart',
-        url_path='download_shopping_cart',
-        permission_classes=[IsAuthenticated],
-    )
-    def download_shopping_cart(self, request):
-        """ Метод  для формирования списка покупок в pdf-файле. """
+        recipe = self.get_recipe(pk)
+        args = {'user': self.request.user, 'recipe': recipe}
+        return self.delete_method(Purchase, args)
 
-        ingredients = (
-            RecipeIngredient.objects.filter(
-                recipe__purchases_recipe__user=self.request.user
-            )
-            .values('ingredient__name', 'ingredient__measurement_unit')
-            .annotate(sum_amount=Sum('amount'))
-        )
-        response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="purchase.pdf"'
+    @staticmethod
+    def generate_pdf(pdf, ingredients):
+        """ Метод, генерирующий pdf-файл. """
 
-        buffer = io.BytesIO()
-
-        pdf = SimpleDocTemplate(
-            buffer,
-            pagesize=A4,
-            rightMargin=20,
-            leftMargin=20,
-            topMargin=15,
-            bottomMargin=15,
-        )
         pdfmetrics.registerFont(
             TTFont('DejaVuSerif', 'DejaVuSerif.ttf')
         )
@@ -202,13 +177,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
         doc_obj.append(Paragraph('Список покупок:', style=style))
         rows = []
         rows.append(('Ингредиент', 'Количество', 'Ед.измерения'))
-        ingredients = (
-            RecipeIngredient.objects.filter(
-                recipe__purchases_recipe__user=self.request.user
-            )
-            .values('ingredient__name', 'ingredient__measurement_unit')
-            .annotate(sum_amount=Sum('amount'))
-        )
         for ingredient in ingredients:
             rows.append(
                 (
@@ -231,8 +199,36 @@ class RecipeViewSet(viewsets.ModelViewSet):
         )
         doc_obj.append(table)
         pdf.build(doc_obj)
-        response.write(buffer.getvalue())
-        buffer.close()
+        return pdf
+
+    @action(
+        detail=False,
+        methods=['GET'],
+        url_name='download_shopping_cart',
+        url_path='download_shopping_cart',
+        permission_classes=[IsAuthenticated],
+    )
+    def download_shopping_cart(self, request):
+        """ Метод  для формирования списка покупок в pdf-файле. """
+
+        ingredients = (
+            RecipeIngredient.objects.filter(
+                recipe__purchases_recipe__user=self.request.user
+            )
+            .values('ingredient__name', 'ingredient__measurement_unit')
+            .annotate(sum_amount=Sum('amount'))
+        )
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="purchase.pdf"'
+        pdf = SimpleDocTemplate(
+            response,
+            pagesize=A4,
+            rightMargin=20,
+            leftMargin=20,
+            topMargin=15,
+            bottomMargin=15,
+        )
+        self.generate_pdf(pdf, ingredients)
         return response
 
 
@@ -266,20 +262,16 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer = SetPasswordSerializer(
             data=request.data, context={'request': request}
         )
-        if serializer.is_valid():
-            user.set_password(serializer.validated_data['new_password'])
-            user.save()
-            return Response(
-                'Пароль успешно изменен.', status=status.HTTP_204_NO_CONTENT
-            )
-        else:
-            return Response(
-                serializer.errors, status=status.HTTP_400_BAD_REQUEST
-            )
+        serializer.is_valid(raise_exception=True)
+        user.set_password(serializer.validated_data['new_password'])
+        user.save()
+        return Response(
+            'Пароль успешно изменен.', status=status.HTTP_204_NO_CONTENT
+        )
 
     @action(
         detail=True,
-        methods=['POST', 'DELETE'],
+        methods=['POST'],
         url_name='subscribe',
         url_path='subscribe',
         permission_classes=[IsAuthenticated],
@@ -288,36 +280,38 @@ class UserViewSet(viewsets.ModelViewSet):
         """ Метод  для работы с подписками пользователя. """
 
         user = get_object_or_404(MyUser, pk=pk)
-        if request.method == 'POST':
-            if not Subscription.objects.filter(
+        if Subscription.objects.filter(
+            subscriber=self.request.user, subscriptions=pk
+        ).exists():
+            return Response(
+                {'errors': 'Ошибка подписки!'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        subscribe = Subscription.objects.create(
+            subscriber=self.request.user, subscriptions=user
+        )
+        serializer = SubscribeSerializer(
+            subscribe, context={'request': request}
+        )
+        return Response(
+            serializer.data, status=status.HTTP_201_CREATED
+        )
+
+    @subscribe.mapping.delete
+    def delete_subscribe(self, request, pk):
+
+        get_object_or_404(MyUser, pk=pk)
+        if not (
+            subscribe := Subscription.objects.filter(
                 subscriber=self.request.user, subscriptions=pk
-            ).exists():
-                subscribe = Subscription.objects.create(
-                    subscriber=self.request.user, subscriptions=user
-                )
-                serializer = SubscribeSerializer(
-                    subscribe, context={'request': request}
-                )
-                return Response(
-                    serializer.data, status=status.HTTP_201_CREATED
-                )
-            else:
-                return Response(
-                    {'errors': 'Ошибка подписки!'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-        if request.method == 'DELETE':
-            try:
-                subscribe = Subscription.objects.get(
-                    subscriber=self.request.user, subscriptions=pk
-                )
-            except Subscription.DoesNotExist:
-                return Response(
-                    {'errors': 'Ошибка отписки!'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            subscribe.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            ).first()
+        ):
+            return Response(
+                {'errors': 'Ошибка отписки!'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        subscribe.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
         detail=False,

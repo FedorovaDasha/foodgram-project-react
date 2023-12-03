@@ -1,5 +1,5 @@
 import django_filters
-from django.db import models
+from django.db.models import Case, Q, Value, When
 from recipes.models import Ingredient, Recipe
 from users.models import MyUser
 
@@ -7,17 +7,13 @@ from users.models import MyUser
 class IngredientNameFilter(django_filters.Filter):
     def filter(self, queryset, value):
         if value:
-            queryset_1 = queryset.filter(name__istartswith=value).annotate(
-                qs_order=models.Value(1, models.IntegerField())
-            )
-            queryset_2 = (
-                queryset.filter(name__icontains=value)
-                .exclude(name__istartswith=value)
-                .annotate(qs_order=models.Value(2, models.IntegerField()))
-            )
-            union_qs = queryset_1.union(queryset_2).order_by('qs_order')
-
-        return union_qs
+            queryset = queryset.filter(name__icontains=value).annotate(
+                qs_order=Case(
+                    When(Q(name__istartswith=value), then=Value('1')),
+                    default=Value('2')
+                )
+            ).order_by('qs_order', 'name')
+        return queryset
 
 
 class IngredientFilter(django_filters.FilterSet):
