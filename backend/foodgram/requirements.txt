@@ -12,6 +12,7 @@ defusedxml==0.8.0rc2
 Django==3.2.16
 django-filter==23.3
 django-templated-mail==1.1.1
+django_debug_toolbar==3.8.1
 djangorestframework==3.14.0
 djangorestframework-simplejwt==4.7.2
 djoser==2.1.0

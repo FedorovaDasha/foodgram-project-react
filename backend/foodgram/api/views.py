@@ -1,4 +1,5 @@
-from django.db.models import Sum
+from django.db import models
+from django.db.models import BooleanField, Case, Q, Sum, Value, When
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -49,21 +50,42 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 
 class RecipeViewSet(viewsets.ModelViewSet):
     """ Вьюсет для работы с рецептами. """
-
-    queryset = Recipe.objects.all()
     permission_classes = (IsAuthorOrAdminOrReadOnly,)
     pagination_class = FoodgramPagination
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        if 'is_favorited' in self.request.query_params:
-            queryset = queryset.filter(favorites__user=self.request.user)
-        if 'is_in_shopping_cart' in self.request.query_params:
-            queryset = queryset.filter(
-                purchases_recipe__user=self.request.user
+        queryset = Recipe.objects.all().select_related('author').prefetch_related(
+            'tags', 'recipeingredients'
+        )
+        if self.request.user.is_authenticated:
+            queryset = queryset.annotate(
+                is_favorited=Case(
+                    When(Q(favorites__user=self.request.user), then=Value(True)),
+                    default=Value(False),
+                    output_field=BooleanField()
+                ),
+                is_in_shopping_cart=Case(
+                    When(Q(purchases_recipe__user=self.request.user), then=Value(True)),
+                    default=Value(False),
+                    output_field=BooleanField()
+                ),
             )
+        else:
+            queryset = queryset.annotate(
+                is_favorited=models.Value(False, models.BooleanField()),
+                is_in_shopping_cart=models.Value(False, models.BooleanField()),
+            )
+
+        if 'is_favorited' in self.request.query_params:
+
+            queryset = queryset.filter(is_favorited=True)
+
+        if 'is_in_shopping_cart' in self.request.query_params:
+
+            queryset = queryset.filter(is_in_shopping_cart=True)
+
         return queryset
 
     def get_serializer_class(self):
