@@ -3,8 +3,8 @@ import base64
 import djoser.serializers
 from django.core.files.base import ContentFile
 from django.core.validators import MinValueValidator
-from recipes.models import (MIN_AMOUNT, MIN_COOKING_TIME, Favorite, Ingredient,
-                            Purchase, Recipe, RecipeIngredient, Tag)
+from recipes.models import (MIN_AMOUNT, MIN_COOKING_TIME, Ingredient, Recipe,
+                            RecipeIngredient, Tag)
 from rest_framework import serializers
 from users.models import MyUser, Subscription
 
@@ -111,11 +111,19 @@ class ReadRecipeSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
     author = MyUserSerializer(read_only=True)
     ingredients = RecipeIngredientSerializer(
-        many=True, required=False, source='recipeingredients'
+        many=True,
+        required=False,
+        source='recipeingredients'
     )
     image = Base64ImageField(required=True)
-    is_favorited = serializers.BooleanField()
-    is_in_shopping_cart = serializers.BooleanField()
+    is_favorited = serializers.BooleanField(
+        default=False,
+        required=False
+    )
+    is_in_shopping_cart = serializers.BooleanField(
+        default=False,
+        required=False
+    )
 
     class Meta:
         model = Recipe

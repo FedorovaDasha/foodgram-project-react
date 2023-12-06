@@ -1,10 +1,40 @@
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models import Exists, OuterRef
+from users.models import MyUser
 
 from .constants import MAX_LENGTH_VALUE, MIN_AMOUNT, MIN_COOKING_TIME
 
 User = get_user_model()
+
+
+class CustomQuerySet(models.QuerySet):
+
+    def all_recipes(self):
+        return (
+            self.all()
+            .select_related('author')
+            .prefetch_related('tags', 'recipeingredients')
+        )
+
+    def add_user_annotations(self, user_id):
+
+        user = MyUser.objects.get(id=user_id)
+        return self.all_recipes().annotate(
+            is_favorited=Exists(
+                Favorite.objects.filter(user=user, favorites=OuterRef('pk'))
+            ),
+            is_in_shopping_cart=Exists(
+                Purchase.objects.filter(user=user, recipe=OuterRef('pk'))
+            )
+        )
+
+
+class CustomManager(models.Manager):
+
+    def get_queryset(self):
+        return CustomQuerySet(self.model, using=self._db)
 
 
 class Tag(models.Model):
@@ -92,6 +122,8 @@ class Recipe(models.Model):
         auto_now_add=True,
         verbose_name='Дата публикации рецепта',
     )
+    objects = models.Manager()
+    custom_objects = CustomQuerySet.as_manager()
 
     class Meta:
         verbose_name = 'Рецепт'

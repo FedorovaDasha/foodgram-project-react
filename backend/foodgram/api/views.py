@@ -1,5 +1,4 @@
-from django.db import models
-from django.db.models import BooleanField, Case, Q, Sum, Value, When
+from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -29,7 +28,7 @@ from .serializers import (CreateMyUserSerializer, IngredientSerializer,
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
-    """ Вьюсет для работы с тегами. """
+    """Вьюсет для работы с тегами."""
 
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
@@ -38,7 +37,7 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
-    """ Вьюсет для работы с тегами. """
+    """Вьюсет для работы с тегами."""
 
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
@@ -49,54 +48,44 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
-    """ Вьюсет для работы с рецептами. """
+    """Вьюсет для работы с рецептами."""
+
     permission_classes = (IsAuthorOrAdminOrReadOnly,)
     pagination_class = FoodgramPagination
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
 
     def get_queryset(self):
-        queryset = Recipe.objects.all().select_related('author').prefetch_related(
-            'tags', 'recipeingredients'
-        )
         if self.request.user.is_authenticated:
-            queryset = queryset.annotate(
-                is_favorited=Case(
-                    When(Q(favorites__user=self.request.user), then=Value(True)),
-                    default=Value(False),
-                    output_field=BooleanField()
-                ),
-                is_in_shopping_cart=Case(
-                    When(Q(purchases_recipe__user=self.request.user), then=Value(True)),
-                    default=Value(False),
-                    output_field=BooleanField()
-                ),
+            queryset = Recipe.custom_objects.add_user_annotations(
+                self.request.user.id
             )
         else:
-            queryset = queryset.annotate(
-                is_favorited=models.Value(False, models.BooleanField()),
-                is_in_shopping_cart=models.Value(False, models.BooleanField()),
-            )
+            queryset = Recipe.custom_objects.all_recipes()
 
-        if 'is_favorited' in self.request.query_params:
-
+        if (
+            'is_favorited' in self.request.query_params
+            and self.request.user.is_authenticated
+        ):
             queryset = queryset.filter(is_favorited=True)
 
-        if 'is_in_shopping_cart' in self.request.query_params:
-
+        if (
+            'is_in_shopping_cart' in self.request.query_params
+            and self.request.user.is_authenticated
+        ):
             queryset = queryset.filter(is_in_shopping_cart=True)
 
         return queryset
 
     def get_serializer_class(self):
-        """ Метод  для определения класса сериализатора. """
+        """Метод  для определения класса сериализатора."""
 
         if self.request.method in ('POST', 'PATCH', 'DELETE'):
             return WriteRecipeSerializer
         return ReadRecipeSerializer
 
     def add_method(self, model, recipe, args):
-        """ Метод  для добавления в избранное или список покупок. """
+        """Метод  для добавления в избранное или список покупок."""
 
         if model.objects.filter(**args).exists():
             return Response(
@@ -105,12 +94,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
             )
         model.objects.create(**args)
         serializer = SimplyRecipeSerializer(recipe)
-        return Response(
-            serializer.data, status=status.HTTP_201_CREATED
-        )
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def delete_method(self, model, args):
-        """ Метод  для удаления из избранного или списка покупок. """
+        """Метод  для удаления из избранного или списка покупок."""
 
         if not (obj := model.objects.filter(**args).first()):
             return Response(
@@ -118,7 +105,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         obj.delete()
-        return Response(statusсв=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @staticmethod
     def get_recipe(pk):
@@ -127,9 +114,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             recipe = Recipe.objects.get(pk=pk)
         except Recipe.DoesNotExist:
             return Response(
-                {
-                    'errors': 'Операция с несуществующим рецептом невозможна!'
-                },
+                {'errors': 'Операция с несуществующим рецептом невозможна!'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         return recipe
@@ -142,7 +127,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def favorite(self, request, pk):
-        """ Метод  для добавления рецепта в избранное. """
+        """Метод  для добавления рецепта в избранное."""
 
         recipe = self.get_recipe(pk)
         args = {'user': self.request.user, 'favorites': recipe}
@@ -150,7 +135,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @favorite.mapping.delete
     def delete_favorite(self, request, pk):
-        """ Метод  для удаления рецепта из избранного. """
+        """Метод  для удаления рецепта из избранного."""
 
         recipe = self.get_recipe(pk)
         args = {'user': self.request.user, 'favorites': recipe}
@@ -164,7 +149,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def shopping_cart(self, request, pk):
-        """ Метод  для добавления рецепта в список покупок. """
+        """Метод  для добавления рецепта в список покупок."""
 
         recipe = self.get_recipe(pk)
         args = {'user': self.request.user, 'recipe': recipe}
@@ -172,7 +157,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @shopping_cart.mapping.delete
     def delete_shopping_cart(self, request, pk):
-        """ Метод  для удаления рецепта из списка покупок. """
+        """Метод  для удаления рецепта из списка покупок."""
 
         recipe = self.get_recipe(pk)
         args = {'user': self.request.user, 'recipe': recipe}
@@ -180,11 +165,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @staticmethod
     def generate_pdf(pdf, ingredients):
-        """ Метод, генерирующий pdf-файл. """
+        """Метод, генерирующий pdf-файл."""
 
-        pdfmetrics.registerFont(
-            TTFont('DejaVuSerif', 'DejaVuSerif.ttf')
-        )
+        pdfmetrics.registerFont(TTFont('DejaVuSerif', 'DejaVuSerif.ttf'))
         pdfmetrics.registerFont(
             TTFont('DejaVuSerifBold', 'DejaVuSerif-Bold.ttf')
         )
@@ -207,7 +190,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
                     ingredient['ingredient__measurement_unit'],
                 )
             )
-        table = Table(rows, colWidths=[340, 100, 100], rowHeights=20,)
+        table = Table(
+            rows,
+            colWidths=[340, 100, 100],
+            rowHeights=20,
+        )
         table.setStyle(
             [
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.darkcyan),
@@ -231,7 +218,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def download_shopping_cart(self, request):
-        """ Метод  для формирования списка покупок в pdf-файле. """
+        """Метод  для формирования списка покупок в pdf-файле."""
 
         ingredients = (
             RecipeIngredient.objects.filter(
@@ -267,7 +254,7 @@ class UserViewSet(viewsets.ModelViewSet):
         return CreateMyUserSerializer
 
     @action(
-        detail=False, methods=['get'], permission_classes=[IsAuthenticated]
+        detail=False, methods=['GET'], permission_classes=[IsAuthenticated]
     )
     def me(self, request):
         """Метод для получения профиля пользователя."""
@@ -276,7 +263,7 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     @action(
-        detail=False, methods=['post'], permission_classes=[IsAuthenticated]
+        detail=False, methods=['POST'], permission_classes=[IsAuthenticated]
     )
     def set_password(self, request):
         """Метод для смены пароля пользователя."""
@@ -299,7 +286,7 @@ class UserViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def subscribe(self, request, pk):
-        """ Метод  для работы с подписками пользователя. """
+        """Метод  для работы с подписками пользователя."""
 
         user = get_object_or_404(MyUser, pk=pk)
         if Subscription.objects.filter(
@@ -315,13 +302,10 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer = SubscribeSerializer(
             subscribe, context={'request': request}
         )
-        return Response(
-            serializer.data, status=status.HTTP_201_CREATED
-        )
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @subscribe.mapping.delete
     def delete_subscribe(self, request, pk):
-
         get_object_or_404(MyUser, pk=pk)
         if not (
             subscribe := Subscription.objects.filter(
@@ -343,7 +327,7 @@ class UserViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def subscriptions(self, request):
-        """ Подписки пользователя. """
+        """Подписки пользователя."""
 
         subscriptions = Subscription.objects.filter(
             subscriber=self.request.user
