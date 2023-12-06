@@ -4,7 +4,7 @@ from django.db import models
 from django.db.models import F, Q
 
 
-class MyUser(AbstractUser):
+class User(AbstractUser):
     """Модель пользователей."""
 
     ADMIN = 'admin'
@@ -66,13 +66,13 @@ class Subscription(models.Model):
     """ Модель подписок пользователя. """
 
     subscriber = models.ForeignKey(
-        MyUser,
+        User,
         on_delete=models.CASCADE,
         related_name='subscriber',
         verbose_name='Подписчик'
     )
     subscriptions = models.ForeignKey(
-        MyUser,
+        User,
         on_delete=models.CASCADE,
         related_name='subscriptions',
         verbose_name='Подписки'

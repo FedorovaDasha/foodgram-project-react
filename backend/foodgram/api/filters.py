@@ -1,7 +1,7 @@
 import django_filters
 from django.db.models import Case, Q, Value, When
 from recipes.models import Ingredient, Recipe
-from users.models import MyUser
+from users.models import User
 
 
 class IngredientNameFilter(django_filters.Filter):
@@ -27,7 +27,7 @@ class IngredientFilter(django_filters.FilterSet):
 class RecipeFilter(django_filters.FilterSet):
     author = django_filters.ModelChoiceFilter(
         to_field_name='id',
-        queryset=MyUser.objects.all()
+        queryset=User.objects.all()
     )
     tags = django_filters.AllValuesMultipleFilter(
         field_name='tags__slug',

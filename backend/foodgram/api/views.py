@@ -16,15 +16,15 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from users.models import MyUser, Subscription
+from users.models import Subscription, User
 
 from .filters import IngredientFilter, RecipeFilter
 from .pagination import FoodgramPagination
 from .permissions import IsAuthorOrAdminOrReadOnly
-from .serializers import (CreateMyUserSerializer, IngredientSerializer,
-                          MyUserSerializer, ReadRecipeSerializer,
-                          SimplyRecipeSerializer, SubscribeSerializer,
-                          TagSerializer, WriteRecipeSerializer)
+from .serializers import (CreateUserSerializer, IngredientSerializer,
+                          ReadRecipeSerializer, SimplyRecipeSerializer,
+                          SubscribeSerializer, TagSerializer, UserSerializer,
+                          WriteRecipeSerializer)
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -34,6 +34,7 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = TagSerializer
     permission_classes = (AllowAny,)
     pagination_class = None
+    ordering_fields = 'name'
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
@@ -244,14 +245,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
 class UserViewSet(viewsets.ModelViewSet):
     """Вьюсет для работы с пользователями."""
 
-    queryset = MyUser.objects.all()
+    queryset = User.objects.all()
     permission_classes = (AllowAny,)
     pagination_class = FoodgramPagination
 
     def get_serializer_class(self):
         if self.request.method == 'GET':
-            return MyUserSerializer
-        return CreateMyUserSerializer
+            return UserSerializer
+        return CreateUserSerializer
 
     @action(
         detail=False, methods=['GET'], permission_classes=[IsAuthenticated]
@@ -288,7 +289,7 @@ class UserViewSet(viewsets.ModelViewSet):
     def subscribe(self, request, pk):
         """Метод  для работы с подписками пользователя."""
 
-        user = get_object_or_404(MyUser, pk=pk)
+        user = get_object_or_404(User, pk=pk)
         if Subscription.objects.filter(
             subscriber=self.request.user, subscriptions=pk
         ).exists():
@@ -306,7 +307,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @subscribe.mapping.delete
     def delete_subscribe(self, request, pk):
-        get_object_or_404(MyUser, pk=pk)
+        get_object_or_404(User, pk=pk)
         if not (
             subscribe := Subscription.objects.filter(
                 subscriber=self.request.user, subscriptions=pk

@@ -30,7 +30,7 @@ INSTALLED_APPS = [
     'api.apps.ApiConfig',
     'users.apps.UsersConfig',
 ]
-AUTH_USER_MODEL = 'users.MyUser'
+AUTH_USER_MODEL = 'users.User'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -79,9 +79,9 @@ REST_FRAMEWORK = {
 DJOSER = {
     'LOGIN_FIELD': 'email',
     'HIDE_USERS': False,
-    'SERIALIZERS': {'user': 'api.serializers.MyUserSerializer',
-                    'user_create': 'api.serializers.CreateMyUserSerializer',
-                    'current_user': 'api.serializers.MyUserSerializer',
+    'SERIALIZERS': {'user': 'api.serializers.UserSerializer',
+                    'user_create': 'api.serializers.CreateUserSerializer',
+                    'current_user': 'api.serializers.UserSerializer',
                     },
     'PERMISSIONS': {'user': ['rest_framework.permissions.IsAuthenticated'],
                     'user_delete': ['rest_framework.permissions.IsAdminUser'],
@@ -94,7 +94,7 @@ DJOSER = {
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRES_DB', 'django'),
+        'NAME': os.getenv('POSTGRES_DB', 'django_postgres'),
         'USER': os.getenv('POSTGRES_USER', 'postgres'),
         'PASSWORD': os.getenv('POSTGRES_PASSWORD', ''),
         'HOST': os.getenv('DB_HOST', ''),

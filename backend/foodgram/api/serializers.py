@@ -6,14 +6,14 @@ from django.core.validators import MinValueValidator
 from recipes.models import (MIN_AMOUNT, MIN_COOKING_TIME, Ingredient, Recipe,
                             RecipeIngredient, Tag)
 from rest_framework import serializers
-from users.models import MyUser, Subscription
+from users.models import Subscription, User
 
 
-class CreateMyUserSerializer(djoser.serializers.UserCreateSerializer):
+class CreateUserSerializer(djoser.serializers.UserCreateSerializer):
     """Сериализатор для создания пользователя."""
 
     class Meta:
-        model = MyUser
+        model = User
         fields = (
             'email',
             'id',
@@ -24,13 +24,13 @@ class CreateMyUserSerializer(djoser.serializers.UserCreateSerializer):
         )
 
 
-class MyUserSerializer(serializers.ModelSerializer):
+class UserSerializer(serializers.ModelSerializer):
     """Сериализатор для работы с Пользователями."""
 
     is_subscribed = serializers.SerializerMethodField()
 
     class Meta:
-        model = MyUser
+        model = User
         fields = (
             'email',
             'id',
@@ -109,7 +109,7 @@ class ReadRecipeSerializer(serializers.ModelSerializer):
     """Сериализатор для чтения рецептов."""
 
     tags = TagSerializer(many=True, read_only=True)
-    author = MyUserSerializer(read_only=True)
+    author = UserSerializer(read_only=True)
     ingredients = RecipeIngredientSerializer(
         many=True,
         required=False,
@@ -152,7 +152,7 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
         many=True,
         write_only=True,
     )
-    author = MyUserSerializer(read_only=True)
+    author = UserSerializer(read_only=True)
     image = Base64ImageField()
     cooking_time = serializers.IntegerField(
         validators=[MinValueValidator(MIN_COOKING_TIME)],

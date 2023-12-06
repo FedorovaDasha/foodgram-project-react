@@ -3,11 +3,11 @@ from itertools import chain
 from django.conf import settings
 from django.contrib import admin
 
-from .models import MyUser, Subscription
+from .models import Subscription, User
 
 
-@admin.register(MyUser)
-class MyUserAdmin(admin.ModelAdmin):
+@admin.register(User)
+class UserAdmin(admin.ModelAdmin):
     list_display = (
         'id',
         'email',

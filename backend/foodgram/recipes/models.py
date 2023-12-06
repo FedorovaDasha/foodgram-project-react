@@ -2,7 +2,6 @@ from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import Exists, OuterRef
-from users.models import MyUser
 
 from .constants import MAX_LENGTH_VALUE, MIN_AMOUNT, MIN_COOKING_TIME
 
@@ -20,7 +19,7 @@ class CustomQuerySet(models.QuerySet):
 
     def add_user_annotations(self, user_id):
 
-        user = MyUser.objects.get(id=user_id)
+        user = User.objects.get(id=user_id)
         return self.all_recipes().annotate(
             is_favorited=Exists(
                 Favorite.objects.filter(user=user, favorites=OuterRef('pk'))
@@ -29,12 +28,6 @@ class CustomQuerySet(models.QuerySet):
                 Purchase.objects.filter(user=user, recipe=OuterRef('pk'))
             )
         )
-
-
-class CustomManager(models.Manager):
-
-    def get_queryset(self):
-        return CustomQuerySet(self.model, using=self._db)
 
 
 class Tag(models.Model):
