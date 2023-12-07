@@ -115,8 +115,7 @@ class Recipe(models.Model):
         auto_now_add=True,
         verbose_name='Дата публикации рецепта',
     )
-    objects = models.Manager()
-    custom_objects = CustomQuerySet.as_manager()
+    objects = CustomQuerySet.as_manager()
 
     class Meta:
         verbose_name = 'Рецепт'

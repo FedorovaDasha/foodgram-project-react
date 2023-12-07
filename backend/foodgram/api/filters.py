@@ -32,12 +32,10 @@ class RecipeFilter(django_filters.FilterSet):
     tags = django_filters.AllValuesMultipleFilter(
         field_name='tags__slug',
     )
-    is_favorited = django_filters.BooleanFilter(
-        field_name='is_favorited'
-    )
-    is_in_shopping_cart = django_filters.BooleanFilter(
-        field_name='is_in_shopping_cart'
-    )
+    is_favorited = django_filters.TypedChoiceFilter(
+        choices=[(1, 'true'), (0, 'false')], field_name='is_favorited')
+    is_in_shopping_cart = django_filters.TypedChoiceFilter(
+        choices=[(1, 'true'), (0, 'false')], field_name='is_in_shopping_cart')
 
     class Meta:
         model = Recipe

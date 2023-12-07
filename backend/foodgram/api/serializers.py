@@ -243,44 +243,20 @@ class SimplyRecipeSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'image', 'cooking_time')
 
 
-class SubscribeSerializer(serializers.ModelSerializer):
+class SubscribeSerializer(UserSerializer):
     """Сериализатор для работы с подписками."""
 
-    email = serializers.CharField(source='subscriptions.email', read_only=True)
-    id = serializers.IntegerField(source='subscriptions.id', read_only=True)
-    username = serializers.CharField(source='subscriptions.username')
-    first_name = serializers.CharField(source='subscriptions.first_name')
-    last_name = serializers.CharField(source='subscriptions.last_name')
-    is_subscribed = serializers.SerializerMethodField()
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
 
-    class Meta:
-        model = Subscription
-        fields = (
-            'email',
-            'id',
-            'username',
-            'first_name',
-            'last_name',
-            'is_subscribed',
-            'recipes',
-            'recipes_count',
-        )
-
-    def get_is_subscribed(self, obj):
-        request = self.context.get('request')
-        return (
-            request.user.is_authenticated
-            and Subscription.objects.filter(
-                subscriber=request.user, subscriptions=obj.subscriptions
-            ).exists()
-        )
+    class Meta(UserSerializer.Meta):
+        model = User
+        fields = UserSerializer.Meta.fields + ('recipes', 'recipes_count')
 
     def get_recipes(self, obj):
-        recipes = Recipe.objects.filter(author=obj.subscriptions)
+        recipes = Recipe.objects.filter(author=obj)
         serializers = SimplyRecipeSerializer(recipes, many=True)
         return serializers.data
 
     def get_recipes_count(self, obj):
-        return Recipe.objects.filter(author=obj.subscriptions).count()
+        return Recipe.objects.filter(author=obj).count()

@@ -58,23 +58,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         if self.request.user.is_authenticated:
-            queryset = Recipe.custom_objects.add_user_annotations(
+            queryset = Recipe.objects.add_user_annotations(
                 self.request.user.id
             )
         else:
-            queryset = Recipe.custom_objects.all_recipes()
-
-        if (
-            'is_favorited' in self.request.query_params
-            and self.request.user.is_authenticated
-        ):
-            queryset = queryset.filter(is_favorited=True)
-
-        if (
-            'is_in_shopping_cart' in self.request.query_params
-            and self.request.user.is_authenticated
-        ):
-            queryset = queryset.filter(is_in_shopping_cart=True)
+            queryset = Recipe.objects.all_recipes()
 
         return queryset
 
@@ -297,11 +285,11 @@ class UserViewSet(viewsets.ModelViewSet):
                 {'errors': 'Ошибка подписки!'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        subscribe = Subscription.objects.create(
+        _ = Subscription.objects.create(
             subscriber=self.request.user, subscriptions=user
         )
         serializer = SubscribeSerializer(
-            subscribe, context={'request': request}
+            self.request.user, context={'request': request}
         )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -330,8 +318,8 @@ class UserViewSet(viewsets.ModelViewSet):
     def subscriptions(self, request):
         """Подписки пользователя."""
 
-        subscriptions = Subscription.objects.filter(
-            subscriber=self.request.user
+        subscriptions = User.objects.filter(
+            subscriptions__subscriber=self.request.user
         )
         limit_pages = self.paginate_queryset(subscriptions)
         serializer = SubscribeSerializer(
