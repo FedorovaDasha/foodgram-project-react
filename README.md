@@ -72,12 +72,6 @@ http://localhost:8000/
 ### _Демо-версия проекта:_
 [Foodgram](https://myfoodgrammm.sytes.net)
 
-### _Для просмотра панели администратора:_
-
-e-mail: admin@mail.ru
-
-password: Superadmin
-
 ##
 Над проектом работала [FedorovaDasha](https://github.com/FedorovaDasha).
 
