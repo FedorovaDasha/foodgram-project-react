@@ -47,6 +47,7 @@ https://myfoodgrammm.sytes.net/
 ```
 git clone git@github.com:FedorovaDasha/foodgram-project-react.git
 ```
+- Создаем в папке с репозиторием файл .env по образцу из .env.example
 - Выполняем запуск:
 ```
 sudo docker compose -f docker-compose.yml up
